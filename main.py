@@ -39,5 +39,5 @@ def process_audio(audio_file):
 
 
 if __name__ == "__main__":
-    output = process_audio("sample.wav")
+    output = process_audio(r"C:\Users\win10\Desktop\Kannada_stt_project\sample.wav")
     print("\n✅ Output:", output)
