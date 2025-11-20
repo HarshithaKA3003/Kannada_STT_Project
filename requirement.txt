@@ -1,0 +1,6 @@
+torch
+transformers
+soundfile
+fastapi
+uvicorn
+openai-whisper

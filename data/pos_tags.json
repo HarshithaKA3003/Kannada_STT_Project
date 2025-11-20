@@ -1,0 +1,9 @@
+{
+  "ಅವನು": {"tag": "PRON", "person": "third", "number": "singular", "gender": "male"},
+  "ಅವಳು": {"tag": "PRON", "person": "third", "number": "singular", "gender": "female"},
+  "ನಾನು": {"tag": "PRON", "person": "first", "number": "singular"},
+  "ನಾವು": {"tag": "PRON", "person": "first", "number": "plural"},
+  "ಬರುತ್ತೇನೆ": "VERB",
+  "ಬರುತ್ತಾಳೆ": "VERB",
+  "ಬರುತ್ತಾನೆ": "VERB"
+}
