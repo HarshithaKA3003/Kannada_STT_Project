@@ -1,5 +1,8 @@
 # Kannada_STT_Project
-# 🎤 Kannada Speech-to-Text + Grammar Correction  
+# 🎤 Kannada Speech-to-Text + Grammar Correction
+TEAM NAME:NAMMA SHEBOTS  
+TEAM MEMBERS:HARSHITHA KA(1MS25ARI003-T)
+             CHAITHANYA DAYANANDA(1MS25ARI007-T)
 ### Speech → Text → POS → Agreement Fix → SOV Ordering
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
