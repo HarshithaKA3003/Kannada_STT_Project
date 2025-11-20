@@ -1,0 +1,32 @@
+{
+  "maadu": {
+    "1": {
+      "sing": {
+        "none": "maaduttiddene",
+        "male": "maaduttiddene",
+        "female": "maaduttiddene"
+      },
+      "plur": {
+        "none": "maaduttiddive"
+      }
+    },
+    "2": {
+      "sing": {
+        "none": "maaduttiddiya"
+      },
+      "plur": {
+        "none": "maaduttiddiri"
+      }
+    },
+    "3": {
+      "sing": {
+        "male": "maaduttiddane",
+        "female": "maaduttiddale",
+        "none": "maaduttade"
+      },
+      "plur": {
+        "none": "maaduttiddare"
+      }
+    }
+  }
+}
