@@ -94,6 +94,19 @@ python main.py
 or
 .\.venv\Scripts\python.exe main.py
 
+after running main.py you can go to front end and click index.html you can see the interface.
+
+How It Works
+main.py
+Runs the full pipeline:
+output = process_audio("sample.wav")
+Processing Steps
+Speech-to-Text → modules/speech_to_text.py
+POS Tagging → modules/pos_tagger.py
+Agreement Fix → modules/agreement_checker.py
+SOV Reordering → modules/word_order_corrector.py
+Final Output → Corrected Kannada sentence
+
 Example Output
 🗣 Transcribed Text: ನಾನೆ ಶಾಲೆಗೆ ಹೋದೆ
 🔠 POS Tags: [('ನಾನೆ', 'PRON'), ('ಶಾಲೆಗೆ', 'NOUN'), ('ಹೋದೆ', 'VERB')]
