@@ -17,6 +17,7 @@
             border: 1px solid #ddd;
             line-height: 1.7;
             font-size: 18px;
+            white-space: pre-wrap; /* makes POS tags readable */
         }
     </style>
 </head>
@@ -40,10 +41,17 @@ document.getElementById("fileInput").addEventListener("change", function(event) 
     reader.onload = function(e) {
         const data = JSON.parse(e.target.result);
 
-        document.getElementById("text").innerText = "🗣 Transcribed: " + data.transcribed;
-        document.getElementById("pos").innerText  = "🔠 POS Tags: " + JSON.stringify(data.pos, null, 2);
-        document.getElementById("verb").innerText = "✔ Corrected Verb: " + data.verb;
-        document.getElementById("final").innerText = "🔀 Final Sentence: " + data.final_sentence;
+        document.getElementById("text").innerText =
+            "🗣 Transcribed: " + (data.transcribed_text || "N/A");
+
+        document.getElementById("pos").innerText =
+            "🔠 POS Tags:\n" + (data.pos_tags ? JSON.stringify(data.pos_tags, null, 2) : "N/A");
+
+        document.getElementById("verb").innerText =
+            "✔ Corrected Verb: " + (data.corrected_verb || "N/A");
+
+        document.getElementById("final").innerText =
+            "🔀 Final Sentence: " + (data.final_sentence || "N/A");
     };
 
     reader.readAsText(file);
