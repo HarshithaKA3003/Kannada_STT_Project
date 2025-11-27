@@ -1,24 +1,40 @@
 import speech_recognition as sr
+from pydub import AudioSegment
+import os
+import tempfile
 
-def speech_to_text(audio_file):
+def speech_to_text(audio_path):
     r = sr.Recognizer()
-    
+
     try:
-        with sr.AudioFile(audio_file) as source:
-            r.adjust_for_ambient_noise(source, duration=0.4)  # Noise reduction
+        # Convert ANY file to WAV
+        wav_path = convert_to_wav(audio_path)
+
+        with sr.AudioFile(wav_path) as source:
+            r.adjust_for_ambient_noise(source)
             audio = r.record(source)
 
-        # Google Kannada Speech-to-Text
         text = r.recognize_google(audio, language="kn-IN")
-
-        # Ensure UTF-8 safe output
-        return text.encode("utf-8").decode("utf-8")
+        return text
 
     except sr.UnknownValueError:
         return "ERROR: Could not understand the audio."
-    
+
     except sr.RequestError:
-        return "ERROR: Speech recognition service failed. Check internet."
-    
+        return "ERROR: Speech recognition service failed."
+
     except Exception as e:
         return "ERROR: " + str(e)
+
+
+def convert_to_wav(audio_path):
+    ext = os.path.splitext(audio_path)[1].lower()
+
+    # If already WAV, no need to convert
+    if ext == ".wav":
+        return audio_path
+
+    sound = AudioSegment.from_file(audio_path)
+    temp_wav = tempfile.mktemp(suffix=".wav")
+    sound.export(temp_wav, format="wav")
+    return temp_wav

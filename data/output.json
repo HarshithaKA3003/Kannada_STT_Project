@@ -1,27 +1,51 @@
 {
-    "transcribed_text": "ರಾಮನ ಎಡಬಲದಲ್ಲಿ ಸೀತಾ ಲಕ್ಷ್ಮಣರು ಇದ್ದರು",
+    "transcribed_text": "ಹರ್ಷಿತ ದೇವರ ಕೃಪೆಗಾಗಿ ದೇವಸ್ಥಾನಕ್ಕೆ ಹೋದನು",
+    "words": [
+        "ಹರ್ಷಿತ",
+        "ದೇವರ",
+        "ಕೃಪೆಗಾಗಿ",
+        "ದೇವಸ್ಥಾನಕ್ಕೆ",
+        "ಹೋದಳು"
+    ],
     "pos_tags": [
         [
-            "ರಾಮನ",
-            "UNK"
+            "ಹರ್ಷಿತ",
+            {
+                "pos": "NOUN",
+                "person": "third",
+                "number": "singular",
+                "gender": "female"
+            }
         ],
         [
-            "ಎಡಬಲದಲ್ಲಿ",
-            "UNK"
+            "ದೇವರ",
+            {
+                "pos": "NOUN",
+                "person": "third",
+                "number": "singular"
+            }
         ],
         [
-            "ಸೀತಾ",
-            "UNK"
+            "ಕೃಪೆಗಾಗಿ",
+            {
+                "pos": "NOUN",
+                "person": "third",
+                "number": "singular"
+            }
         ],
         [
-            "ಲಕ್ಷ್ಮಣರು",
-            "UNK"
+            "ದೇವಸ್ಥಾನಕ್ಕೆ",
+            {
+                "pos": "OBJ"
+            }
         ],
         [
-            "ಇದ್ದರು",
-            "UNK"
+            "ಹೋದಳು",
+            {
+                "pos": "VERB"
+            }
         ]
     ],
-    "corrected_verb": "ಇದ್ದರು",
-    "final_sentence": "ರಾಮನ ಎಡಬಲದಲ್ಲಿ ಸೀತಾ ಲಕ್ಷ್ಮಣರು ಇದ್ದರು"
+    "corrected_verb": "ಹೋದಳು",
+    "final_sentence": "ಹರ್ಷಿತ ದೇವಸ್ಥಾನಕ್ಕೆ ದೇವರ ಕೃಪೆಗಾಗಿ ಹೋದಳು"
 }

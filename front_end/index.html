@@ -15,18 +15,17 @@
             margin-bottom: 15px;
             border-radius: 6px;
             border: 1px solid #ddd;
-            line-height: 1.7;
             font-size: 18px;
-            white-space: pre-wrap; /* makes POS tags readable */
+            white-space: pre-wrap;
         }
     </style>
 </head>
 <body>
 
-<h2>Kannada Speech-to-Text Output</h2>
+<h2>Kannada Sentence corrector Output</h2>
 
-<input type="file" id="fileInput" accept=".json">
-<p>➡ Select <b>output.json</b></p>
+<input type="file" id="audioInput" accept=".wav,.mp3,.m4a,.mp4">
+<button onclick="uploadAudio()">Upload & Process</button>
 
 <div class="box" id="text">🗣 Transcribed: </div>
 <div class="box" id="pos">🔠 POS Tags: </div>
@@ -34,28 +33,41 @@
 <div class="box" id="final">🔀 Final Sentence: </div>
 
 <script>
-document.getElementById("fileInput").addEventListener("change", function(event) {
-    const file = event.target.files[0];
-    const reader = new FileReader();
+function uploadAudio() {
+    const file = document.getElementById("audioInput").files[0];
+    if (!file) {
+        alert("Please select an audio file");
+        return;
+    }
 
-    reader.onload = function(e) {
-        const data = JSON.parse(e.target.result);
+    let formData = new FormData();
+    formData.append("audio", file);
+
+    fetch("/process_audio", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert("Error: " + data.error);
+            return;
+        }
 
         document.getElementById("text").innerText =
             "🗣 Transcribed: " + (data.transcribed_text || "N/A");
 
         document.getElementById("pos").innerText =
-            "🔠 POS Tags:\n" + (data.pos_tags ? JSON.stringify(data.pos_tags, null, 2) : "N/A");
+            "🔠 POS Tags:\n" + JSON.stringify(data.pos_tags, null, 2);
 
         document.getElementById("verb").innerText =
             "✔ Corrected Verb: " + (data.corrected_verb || "N/A");
 
         document.getElementById("final").innerText =
             "🔀 Final Sentence: " + (data.final_sentence || "N/A");
-    };
-
-    reader.readAsText(file);
-});
+    })
+    .catch(err => alert("Error: " + err));
+}
 </script>
 
 </body>

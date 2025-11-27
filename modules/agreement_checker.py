@@ -1,142 +1,186 @@
 import json
 import os
 
-# Path to your conjugations file
-_CONJ_PATH = os.path.join("data", "verb_conjugations.json")
+# Use project-level data folder (one level up from modules/)
+PROJECT_DATA = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+_CONJ_PATH = os.path.join(PROJECT_DATA, "verb_conjugations.json")
+_GENDER_PATH = os.path.join(PROJECT_DATA, "gender_names.json")
 
-# Load verb conjugation table safely
+# Load conjugations (safe)
 try:
-    with open(_CONJ_PATH, "r", encoding="utf-8") as fh:
-        content = fh.read().strip()
-        if not content:
-            # Empty file
-            verb_data = {}
-            print(f"[agreement_checker] Warning: {_CONJ_PATH} is empty.")
-        else:
-            try:
-                verb_data = json.loads(content)
-            except json.JSONDecodeError as je:
-                print(f"[agreement_checker] JSON decode error in {_CONJ_PATH}: {je}")
-                verb_data = {}
-except FileNotFoundError:
-    print(f"[agreement_checker] Warning: {_CONJ_PATH} not found.")
-    verb_data = {}
-except Exception as e:
-    print(f"[agreement_checker] Error loading {_CONJ_PATH}: {e}")
+    with open(_CONJ_PATH, "r", encoding="utf-8") as f:
+        content = f.read().strip()
+        verb_data = json.loads(content) if content else {}
+except Exception:
     verb_data = {}
 
+# Load optional gender dictionary (may not exist)
+try:
+    with open(_GENDER_PATH, "r", encoding="utf-8") as f:
+        gender_dict = json.load(f)
+except Exception:
+    gender_dict = {"female": [], "male": []}
 
-def fix_agreement(subject, verb, pos_tags=None):
+
+def detect_gender(words):
     """
-    Fix simple subject-verb agreement for Kannada verbs using verb_data.
-
-    Accepts either:
-        fix_agreement(subject, verb)
-    or:
-        fix_agreement(subject, verb, pos_tags)
-
-    pos_tags (optional) can be a dict mapping word -> feature dict, e.g.
-        {"nanu": {"person": "1", "number": "sing", "gender": "none"}}
-
-    Expected structure in verb_data (example):
-    {
-      "maadu": {
-         "1": { "sing": { "male": "maadidene", "female": "maadidini", "none": "maadidini" }, "plur": {...} },
-         "2": { ... },
-         "3": { ... }
-      },
-      ...
-    }
-
-    If verb_data doesn't contain mapping, return original verb.
+    Auto-detect gender using multiple signals:
+     1) gender_dict (if present)
+     2) small built-in special-name lists
+     3) heuristic suffix rules for Kannada names
+    Returns: "female", "male", or None
     """
+    # small built-in lists (extend as needed)
+    female_special = {"ಹರ್ಷಿತ", "ಹರ್ಷಿತಾ", "ಪ್ರಿಯಾ", "ರೇವತಿ", "ಪ್ರಿಯాంకಾ"}
+    male_special = {"ಹರ್ಷಿತ್", "ಪ್ರಸಾದ್", "ಸುದೀಪ್", "ರಾಘವ"}
 
-    # Default defensive values
-    person = None
-    number = None
-    gender = None
+    female_suffixes = ["ಾ", "ತಾ", "ೀಕಾ", "ಿತಾ", "ಾಳ"]
+    male_suffixes = ["್ರಾಜ", "್ಶ್", "ಕುಮಾರ್", "್ನ್", "ೇಶ್"]
 
-    # If pos_tags provided and contains features for subject, get them
+    for w in words:
+        if not isinstance(w, str):
+            continue
+
+        # 1) dictionary lookup
+        if w in gender_dict.get("female", []):
+            return "female"
+        if w in gender_dict.get("male", []):
+            return "male"
+
+        # 2) small special lists
+        if w in female_special:
+            return "female"
+        if w in male_special:
+            return "male"
+
+        # 3) suffix heuristics
+        for suf in female_suffixes:
+            if w.endswith(suf):
+                return "female"
+        for suf in male_suffixes:
+            if w.endswith(suf):
+                return "male"
+
+    return None
+
+
+def _normalize_person(person_in):
+    if person_in is None:
+        return "3"
+    s = str(person_in).lower()
+    if s.startswith("1"):
+        return "1"
+    if s.startswith("2"):
+        return "2"
+    return "3"
+
+
+def _normalize_number(number_in):
+    if number_in is None:
+        return "sing"
+    s = str(number_in).lower()
+    if s.startswith("pl"):
+        return "plur"
+    return "sing"
+
+
+def _heuristic_feminize_verb(verb):
+    """
+    Conservative feminize heuristic:
+      - Handles typical finite masculine endings: 'ನು' -> 'ಳು'
+      - Handles 'ದನು' -> 'ದಳು'
+    Avoids aggressive rewrites.
+    """
+    if not isinstance(verb, str) or len(verb) < 2:
+        return verb
+
+    # common: 'ದನು' -> 'ದಳು' (e.g., 'ಹೋದನು' -> 'ಹೋದಳು')
+    if verb.endswith("ದನು"):
+        # replace last two characters 'ನು' with 'ಳು' but keep preceding char 'ದ'
+        return verb[:-2] + "ಳು"
+
+    # generic 'ನು' -> 'ಳು' (safe for many verbs)
+    if verb.endswith("ನು"):
+        return verb[:-1] + "ಳು"
+
+    # if already feminine form or unknown, return as-is
+    return verb
+
+
+def fix_agreement(subject, verb, pos_tags=None, words=None):
+    """
+    Main public function.
+    - Tries to use verb_conjugations.json first (exact key match).
+    - Falls back to translit map if provided (small mapping).
+    - If not found and subject is female, applies conservative heuristic.
+    - Returns a string (corrected verb) — never a non-string.
+    """
+    person = "3"
+    number = "sing"
+    gender = "none"
+
+    # extract person/number/gender from pos_tags if available
     if pos_tags:
         try:
-            # if pos_tags is list or list-of-tuples, try to map
-            if isinstance(pos_tags, dict):
-                features = pos_tags.get(subject, {})
-            else:
-                # try convert list of (word, POS/features) to dict if it's (word, {features})
-                features = {}
-                for item in pos_tags:
-                    if isinstance(item, (list, tuple)) and len(item) == 2:
-                        w, feat = item
-                        if isinstance(feat, dict):
-                            features[w] = feat
-                features = features.get(subject, {})
-            person = features.get("person")
-            number = features.get("number")
-            gender = features.get("gender")
+            for w, feats in pos_tags:
+                if w == subject and isinstance(feats, dict):
+                    person = _normalize_person(feats.get("person", person))
+                    number = _normalize_number(feats.get("number", number))
+                    g = feats.get("gender")
+                    if g:
+                        gender = g
         except Exception:
-            # swallow any parsing issues and fallback to None
-            person = number = gender = None
+            pass
 
-    # If pos_tags didn't provide features, try simple heuristics (optional)
-    # For now, if verb_data is empty or missing keys, return original verb
-    if not verb_data:
-        return verb
+    # detect gender from words if still none
+    if gender in (None, "none") and words:
+        g = detect_gender(words)
+        if g:
+            gender = g
 
-    # Defensive lookups - ensure keys exist at each level
+    # 1) Try direct lookup in verb_data using verb as key
     try:
-        verb_root = verb  # assume 'verb' is root form; adapt if your JSON keys differ
-        if verb_root not in verb_data:
-            # maybe verb is already inflected or spelled differently; return original
-            return verb
+        entry = verb_data.get(verb)
+        if entry:
+            p_entry = entry.get(str(person))
+            if p_entry:
+                num_entry = p_entry.get(number)
+                if num_entry:
+                    # prefer gendered entry, then 'none'
+                    if gender in num_entry and num_entry.get(gender):
+                        return num_entry.get(gender)
+                    if "none" in num_entry and num_entry.get("none"):
+                        return num_entry.get("none")
+    except Exception:
+        pass
 
-        # If any feature missing, pick a reasonable default ordering
-        # Try person -> number -> gender, with fallbacks
-        for p in (person, "3", "1", "2"):
-            if p is None:
-                continue
-            p_key = str(p)
-            if p_key not in verb_data[verb_root]:
-                continue
-            # inside person
-            person_block = verb_data[verb_root][p_key]
+    # 2) Try a tiny mapping for common Kannada verbs to romanized keys in verb_data
+    # (you can extend this map to include more verbs)
+    translit_map = {
+        "ಮಾಡು": "maadu",
+        "ಮಾಡಿದನು": "maaduttiddane",
+        "ಮಾಡಿದ್ದರು": "maaduttiddare",
+    }
+    try:
+        mapped = translit_map.get(verb)
+        if mapped and mapped in verb_data:
+            entry = verb_data[mapped]
+            p_entry = entry.get(str(person))
+            if p_entry:
+                num_entry = p_entry.get(number)
+                if num_entry:
+                    if gender in num_entry and num_entry.get(gender):
+                        return num_entry.get(gender)
+                    if "none" in num_entry and num_entry.get("none"):
+                        return num_entry.get("none")
+    except Exception:
+        pass
 
-            for n in (number, "sing", "plur"):
-                if n is None:
-                    continue
-                if n not in person_block:
-                    continue
-                number_block = person_block[n]
+    # 3) If subject is female, apply conservative heuristic
+    if gender == "female":
+        heur = _heuristic_feminize_verb(verb)
+        if heur != verb:
+            return heur
 
-                for g in (gender, "none", "male", "female"):
-                    if g is None:
-                        continue
-                    if g in number_block:
-                        return number_block[g]
-                # if exact gender not found, try any available value
-                # return first available string
-                for val in number_block.values():
-                    return val
-
-        # final fallback: try to return any nested form
-        # navigate and return first string found
-        def find_any_string(obj):
-            if isinstance(obj, str):
-                return obj
-            if isinstance(obj, dict):
-                for k in obj:
-                    res = find_any_string(obj[k])
-                    if res:
-                        return res
-            return None
-
-        any_form = find_any_string(verb_data[verb_root])
-        if any_form:
-            return any_form
-
-    except Exception as e:
-        print(f"[agreement_checker] Error during agreement fix lookup: {e}")
-        return verb
-
-    # If everything fails, return original verb
+    # final fallback: return verb unchanged
     return verb

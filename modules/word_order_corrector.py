@@ -1,54 +1,103 @@
 import json
+import os
 
-# Load POS tags (UTF-8 FIX)
-pos_data = json.load(open("data/pos_tags.json", "r", encoding="utf-8"))
+# Use project-level data folder
+PROJECT_DATA = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+_POS_PATH = os.path.join(PROJECT_DATA, "pos_tags.json")
+
+try:
+    with open(_POS_PATH, "r", encoding="utf-8") as f:
+        pos_data = json.load(f)
+except Exception:
+    pos_data = {}
+
+
+def smart_pos_guess(word):
+    """Fallback POS guess when tagger gives UNK."""
+    w = (word or "").strip()
+    if not w:
+        return "UNK"
+
+    # Very small set of verb cues in Kannada finite forms
+    if w.endswith("ನು") or w.endswith("ಳು") or w.endswith("ದನು") or w.endswith("ದಳು") or w.endswith("ಯಿತು"):
+        return "VERB"
+
+    # object markers
+    if w.endswith("ನ್ನು") or w.endswith("ಗೆ") or w.endswith("ಕ್ಕೆ") or w.endswith("ನಿಗೆ"):
+        return "OBJ"
+
+    # location markers
+    if w.endswith("ಲ್ಲಿ") or w.endswith("ನಲ್ಲ") or w.endswith("ಕ್ಕೆ"):
+        return "LOC"
+
+    # pronouns
+    if w in {"ನಾನು", "ನೀನು", "ಅವನು", "ಅವಳು", "ಅವರು", "ನಾವು"}:
+        return "PRON"
+
+    return "NOUN"
+
+
+def looks_like_object(word):
+    markers = ["ಗೆ", "ಅನ್ನು", "ಯನ್ನು", "ಕ್ಕೆ", "ನಿಗೆ"]
+    return any(word.endswith(m) for m in markers)
 
 
 def reorder_to_sov(words, pos_tags):
     """
-    Reorder words into SOV format (Subject–Object–Verb)
-    words    = list of words
-    pos_tags = list of (word, POS)
+    Build S O (location/other) V order.
+    pos_tags: list of (word, features) tuples.
+    This function trusts pos_tags; if tag == UNK, uses smart_pos_guess.
     """
 
+    subject = None
     verb = None
-    subjects = []
     objects = []
+    locations = []
     others = []
 
-    # Classify words by POS
-    for w, tag in pos_tags:
+    for (w, feats) in pos_tags:
+        tag = "UNK"
+        if isinstance(feats, dict):
+            tag = feats.get("pos", "UNK")
+        tag = str(tag).upper()
 
-        tag = tag.upper()
+        if tag == "UNK":
+            tag = smart_pos_guess(w)
 
         if tag == "VERB":
+            # Keep the last verb seen (main verb)
             verb = w
 
-        elif tag in ("PRON", "NOUN", "SUBJECT"):
-            subjects.append(w)
+        elif tag in ("PRON", "NOUN"):
+            # prefer to treat marked objects as objects
+            if looks_like_object(w):
+                objects.append(w)
+            else:
+                if not subject:
+                    subject = w
+                else:
+                    others.append(w)
 
-        elif tag in ("OBJ", "OBJECT"):
+        elif tag == "OBJ":
             objects.append(w)
+
+        elif tag == "LOC":
+            locations.append(w)
 
         else:
             others.append(w)
 
-    # SOV = Subject + Object + Verb
-    final_order = []
-
-    if subjects:
-        final_order.extend(subjects)
-
-    if objects:
-        final_order.extend(objects)
-
-    final_order.extend(others)
-
-    if verb:
-        final_order.append(verb)
-
-    # If verb missing → return original
+    # If no verb found, return original ordering (join words)
     if not verb:
         return " ".join(words)
 
+    final_order = []
+    if subject:
+        final_order.append(subject)
+
+    final_order.extend(objects)
+    final_order.extend(locations)
+    final_order.extend(others)
+
+    final_order.append(verb)
     return " ".join(final_order)
